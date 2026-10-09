@@ -240,8 +240,14 @@
     document.getElementById('p-date').valueAsDate = new Date();
     document.getElementById('s-date').valueAsDate = new Date();
     
+    // Automatically use the hardcoded URL if one isn't stored locally
+    const defaultUrl = document.getElementById('c-url').value;
     const savedUrl = localStorage.getItem(DB_URL);
-    if(savedUrl) document.getElementById('c-url').value = savedUrl;
+    if(savedUrl) {
+      document.getElementById('c-url').value = savedUrl;
+    } else {
+      localStorage.setItem(DB_URL, defaultUrl);
+    }
     
     document.getElementById('last-sync').innerText = localStorage.getItem(DB_SYNC) || 'Never';
 
@@ -282,7 +288,7 @@
         });
       }
 
-      // Rule 2: Populate Sales Dropdown by binding directly to the 'stock' array
+      // Populate Sales Dropdown by binding directly to the 'stock' array
       const sItem = document.getElementById('s-item');
       sItem.innerHTML = '<option value="">-- Select Item --</option>';
       const uniqueItems = new Set();
@@ -296,7 +302,7 @@
         }
       });
 
-      // Rule 2: Calculate & Render Stock Matrix mapping directly from specific payload fields
+      // Calculate & Render Stock Matrix mapping directly from specific payload fields
       const tbody = document.querySelector('#stock-table tbody');
       tbody.innerHTML = '';
       
