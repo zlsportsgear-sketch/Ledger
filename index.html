@@ -3,1175 +3,578 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hardware Store Inventory</title>
-
-  <!-- PWA Metadata -->
-  <meta name="theme-color" content="#0f172a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="HardwareStore">
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Phosphor Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-  <!-- jsPDF & autoTable for Client-Side PDF Generation -->
+  <title>Hardware Store Inventory by Yo Dude</title>
+  
+  <!-- PDF Generation Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              DEFAULT: '#0284c7',
-              dark: '#0369a1',
-              light: '#38bdf8'
-            },
-            surface: {
-              base: '#090d16',
-              card: '#111827',
-              cardAlt: '#1a2234',
-              border: '#1f293d',
-              input: '#0d131f'
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
-          }
-        }
-      }
-    };
-  </script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  
   <style>
-    body {
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+    :root { 
+      --bg: #f8fafc; 
+      --text: #0f172a; 
+      --primary: #0f766e; 
+      --secondary: #b45309; 
+      --border: #cbd5e1; 
+      --surface: #ffffff;
+      --header-bg: #1e293b;
     }
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
-    .custom-scroll::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    .custom-scroll::-webkit-scrollbar-thumb {
-      background: #25334d;
-      border-radius: 4px;
-    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { background-color: var(--bg); color: var(--text); }
+    
+    /* Header Styles */
+    header { background: var(--header-bg); color: white; padding: 14px 16px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn { background: none; border: 1px solid #475569; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; display: none; }
+    h1 { font-size: 1.1rem; font-weight: 600; }
+    
+    .status-pill { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; background: #475569; display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    .status-dot.offline { background: #eab308; }
+    
+    /* Screen Management */
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.2s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* UI Elements */
+    .section-title { font-size: 1.2rem; margin-bottom: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; display: block; }
+    
+    .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stat-box { background: var(--surface); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 1.4rem; font-weight: bold; margin-top: 6px; color: var(--header-bg); }
+    
+    /* Navigation Grid for Dashboard */
+    .nav-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+    .nav-btn { display: flex; justify-content: space-between; align-items: center; padding: 18px 16px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: left; border: none; color: white; }
+    
+    .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; color: white; margin-bottom: 10px; }
+    .btn-sync { background: #3b82f6; }
+    .btn-purchase { background: var(--primary); }
+    .btn-sale { background: var(--secondary); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    
+    /* Forms & Inputs */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
+    input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; background: var(--surface); outline: none; }
+    input:focus, select:focus { border-color: #3b82f6; }
+    
+    /* Tables */
+    .table-container { overflow-x: auto; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: #f1f5f9; color: #475569; font-weight: 600; }
+    
+    /* Queue List */
+    .queue-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 10px; }
+    .queue-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+    .queue-item:last-child { border-bottom: none; }
+    .delete-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
   </style>
 </head>
+<body>
 
-<body class="bg-surface-base text-slate-100 min-h-screen font-sans antialiased flex flex-col items-center select-none pb-10">
+  <header>
+    <div class="header-left">
+      <button id="backBtn" class="back-btn" onclick="nav('dashboard')">◀ Back</button>
+      <h1>Inventory Ledger</h1>
+    </div>
+    <div class="status-pill">
+      <div id="statusDot" class="status-dot"></div>
+      <span id="statusText">Online</span>
+    </div>
+  </header>
 
-  <!-- Application Container (Optimized for Mobile Screens) -->
-  <div class="w-full max-w-lg min-h-screen flex flex-col px-4 pt-3 sm:px-6">
-
-    <header class="flex items-center justify-between py-2.5 border-b border-surface-border">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
-          <i class="ph-bold ph-wrench text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-sm font-bold tracking-wide uppercase text-slate-100">Hardware Store</h1>
-          <div class="flex items-center space-x-1.5 text-[11px] text-slate-400">
-            <span id="network-dot" class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-            <span id="network-text">Online</span>
-            <span>•</span>
-            <span id="sync-status-text">Ready</span>
-          </div>
-        </div>
+  <div class="container">
+    
+    <!-- ==================== DASHBOARD SCREEN ==================== -->
+    <div id="screen-dashboard" class="screen active">
+      <h2 class="section-title">Dashboard & Sync Control</h2>
+      
+      <div class="grid-stats">
+        <div class="stat-box">Unsynced In<div class="stat-value" id="count-in">0</div></div>
+        <div class="stat-box">Unsynced Out<div class="stat-value" id="count-out">0</div></div>
       </div>
-
-      <div class="flex items-center space-x-2">
-        <button id="btn-open-settings" aria-label="Settings" class="p-2 rounded-lg bg-surface-card border border-surface-border text-slate-300 hover:text-white transition">
-          <i class="ph-bold ph-gear text-lg"></i>
+      
+      <button class="btn btn-sync" onclick="syncData()">Sync Now (<span id="sync-total">0</span>)</button>
+      <div style="text-align: center; margin-bottom: 24px; font-size: 0.8rem; color: #64748b;">
+        Last Sync: <span id="last-sync">Never</span>
+      </div>
+      
+      <div class="nav-grid">
+        <button class="nav-btn btn-purchase" onclick="nav('purchase')">
+          <span>Log Purchase (Inward)</span> <span>→</span>
         </button>
-      </div>
-    </header>
-
-    <section class="mt-3.5">
-      <button id="btn-sync-now" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sky-600 via-sky-500 to-cyan-500 text-white font-medium text-sm shadow-lg shadow-sky-950/40 flex items-center justify-between transition-all active:scale-[0.99] border border-sky-400/20">
-        <div class="flex items-center space-x-2.5">
-          <i id="sync-spinner" class="ph-bold ph-arrows-clockwise text-lg"></i>
-          <span class="tracking-wide font-semibold">Sync Now</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <span id="unsynced-badge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-black/40 border border-white/10 text-sky-100">
-            0 unsynced
-          </span>
-          <i class="ph-bold ph-caret-right text-xs opacity-75"></i>
-        </div>
-      </button>
-    </section>
-
-    <!-- Dynamic Screens Host -->
-    <main class="flex-1 mt-4">
-
-      <div id="screen-dashboard" class="space-y-4">
-
-        <!-- 4-Button Primary Navigation Grid -->
-        <div class="grid grid-cols-2 gap-3">
-          <!-- Log Purchase Button -->
-          <button id="nav-btn-purchase" class="p-4 rounded-2xl bg-surface-card border border-emerald-500/20 hover:border-emerald-500/50 flex flex-col items-center justify-center text-center space-y-1.5 active:scale-95 transition-all shadow-sm">
-            <div class="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <i class="ph-bold ph-arrow-down-left text-2xl"></i>
-            </div>
-            <span class="text-sm font-semibold tracking-wide text-slate-100">Log Purchase</span>
-            <span class="text-[11px] text-slate-400">Inward (Tab 1)</span>
-          </button>
-
-          <!-- Log Sale Button -->
-          <button id="nav-btn-sales" class="p-4 rounded-2xl bg-surface-card border border-rose-500/20 hover:border-rose-500/50 flex flex-col items-center justify-center text-center space-y-1.5 active:scale-95 transition-all shadow-sm">
-            <div class="w-11 h-11 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-              <i class="ph-bold ph-arrow-up-right text-2xl"></i>
-            </div>
-            <span class="text-sm font-semibold tracking-wide text-slate-100">Log Sale</span>
-            <span class="text-[11px] text-slate-400">Outward (Tab 2)</span>
-          </button>
-
-          <!-- View Stock Button -->
-          <button id="nav-btn-stock" class="p-4 rounded-2xl bg-surface-card border border-sky-500/20 hover:border-sky-500/50 flex flex-col items-center justify-center text-center space-y-1.5 active:scale-95 transition-all shadow-sm">
-            <div class="w-11 h-11 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
-              <i class="ph-bold ph-cube text-2xl"></i>
-            </div>
-            <span class="text-sm font-semibold tracking-wide text-slate-100">View Stock</span>
-            <span class="text-[11px] text-slate-400">Balance Matrix (Tab 3)</span>
-          </button>
-
-          <!-- View Report Button -->
-          <button id="nav-btn-report" class="p-4 rounded-2xl bg-surface-card border border-purple-500/20 hover:border-purple-500/50 flex flex-col items-center justify-center text-center space-y-1.5 active:scale-95 transition-all shadow-sm">
-            <div class="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-              <i class="ph-bold ph-file-text text-2xl"></i>
-            </div>
-            <span class="text-sm font-semibold tracking-wide text-slate-100">View Report</span>
-            <span class="text-[11px] text-slate-400">PDF & Share</span>
-          </button>
-        </div>
-
-        <!-- Quick Summary Cards -->
-        <div class="grid grid-cols-3 gap-2.5">
-          <div class="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Unsynced In</div>
-            <div id="summary-unsynced-purchases" class="text-base font-bold text-emerald-400 font-mono mt-0.5">0</div>
-          </div>
-          <div class="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Unsynced Out</div>
-            <div id="summary-unsynced-sales" class="text-base font-bold text-rose-400 font-mono mt-0.5">0</div>
-          </div>
-          <div class="bg-surface-card border border-surface-border rounded-xl p-3 text-center">
-            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Last Sync</div>
-            <div id="summary-last-sync" class="text-[11px] font-mono text-slate-300 mt-1 truncate">Never</div>
-          </div>
-        </div>
-
-        <!-- Recent Local Activity List -->
-        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 shadow-sm">
-          <div class="flex items-center justify-between pb-2 border-b border-surface-border">
-            <div class="flex items-center space-x-2">
-              <i class="ph-bold ph-clock-counter-clockwise text-slate-400"></i>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Queued Offline Entries</h2>
-            </div>
-            <span id="queue-total-count" class="text-[11px] text-slate-400">0 items</span>
-          </div>
-
-          <div id="dashboard-queue-list" class="mt-2.5 space-y-2 max-h-56 overflow-y-auto custom-scroll text-xs">
-            <div class="py-6 text-center text-slate-500">Local queue is empty. Everything is synced.</div>
-          </div>
-        </div>
+        <button class="nav-btn btn-sale" onclick="nav('sale')">
+          <span>Log Sale (Outward)</span> <span>→</span>
+        </button>
+        <button class="btn btn-outline" style="text-align: left;" onclick="nav('stock')">View Stock Balance Matrix</button>
+        <button class="btn btn-outline" style="text-align: left;" onclick="nav('report')">View Report PDF & Share</button>
+        <button class="btn btn-outline" style="text-align: left; background: #e2e8f0;" onclick="nav('config')">Backend Configuration</button>
       </div>
 
-      <div id="screen-purchase" class="hidden space-y-4">
-        <div class="flex items-center justify-between pb-1">
-          <button class="btn-back-home flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white transition py-1">
-            <i class="ph-bold ph-arrow-left text-sm"></i>
-            <span>Dashboard</span>
-          </button>
-          <span class="text-xs font-mono font-semibold px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" id="purchase-sl-badge">
-            Sl. No. #1
-          </span>
-        </div>
-
-        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 shadow-lg">
-          <div class="flex items-center space-x-2 mb-3.5">
-            <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-bold">
-              <i class="ph-bold ph-plus"></i>
-            </div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Purchase Entry (Tab 1: Purchase Log)</h2>
-          </div>
-
-          <form id="form-purchase" class="space-y-3" autocomplete="off">
-            <!-- Date (Defaults to today, editable manual input) -->
-            <div>
-              <label for="purchase-date" class="block text-xs font-medium text-slate-300 mb-1">Date</label>
-              <input type="date" id="purchase-date" required
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <!-- Item Description (Plain text input, manual typing) -->
-            <div>
-              <label for="purchase-item" class="block text-xs font-medium text-slate-300 mb-1">Item Description</label>
-              <input type="text" id="purchase-item" placeholder="Manual item name" required autocomplete="off" autocorrect="off" spellcheck="false"
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <!-- Quantity (Triggers phone numeric keypad) -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="purchase-qty" class="block text-xs font-medium text-slate-300 mb-1">Quantity</label>
-                <input type="number" step="any" min="0.001" id="purchase-qty" placeholder="0" required inputmode="decimal"
-                  class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
-              </div>
-
-              <!-- Amount (Triggers phone numeric keypad) -->
-              <div>
-                <label for="purchase-amount" class="block text-xs font-medium text-slate-300 mb-1">Amount</label>
-                <input type="number" step="any" min="0" id="purchase-amount" placeholder="0.00" required inputmode="decimal"
-                  class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
-              </div>
-            </div>
-
-            <!-- Transportation Fare (Triggers phone numeric keypad) -->
-            <div>
-              <label for="purchase-fare" class="block text-xs font-medium text-slate-300 mb-1">Transportation Fare</label>
-              <input type="number" step="any" min="0" id="purchase-fare" placeholder="0.00" required inputmode="decimal"
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500">
-            </div>
-
-            <!-- Submit Purchase Button -->
-            <div class="pt-2">
-              <button type="submit" id="btn-submit-purchase"
-                class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-sm shadow-lg shadow-emerald-950/40 flex items-center justify-center space-x-2 transition active:scale-[0.99]">
-                <i class="ph-bold ph-check"></i>
-                <span>Submit Purchase</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div id="screen-sales" class="hidden space-y-4">
-        <div class="flex items-center justify-between pb-1">
-          <button class="btn-back-home flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white transition py-1">
-            <i class="ph-bold ph-arrow-left text-sm"></i>
-            <span>Dashboard</span>
-          </button>
-          <span class="text-xs font-mono font-semibold px-2.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400" id="sales-sl-badge">
-            Sl. No. #1
-          </span>
-        </div>
-
-        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 shadow-lg">
-          <div class="flex items-center space-x-2 mb-3.5">
-            <div class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-sm font-bold">
-              <i class="ph-bold ph-receipt"></i>
-            </div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Sales Entry (Tab 2: Sales Log)</h2>
-          </div>
-
-          <form id="form-sales" class="space-y-3" autocomplete="off">
-            <!-- Date (Defaults to today, editable manual input) -->
-            <div>
-              <label for="sales-date" class="block text-xs font-medium text-slate-300 mb-1">Date</label>
-              <input type="date" id="sales-date" required
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-rose-500">
-            </div>
-
-            <!-- Item Description (Plain text input, manual typing) -->
-            <div>
-              <label for="sales-item" class="block text-xs font-medium text-slate-300 mb-1">Item Description</label>
-              <input type="text" id="sales-item" placeholder="Manual item name" required autocomplete="off" autocorrect="off" spellcheck="false"
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500">
-            </div>
-
-            <!-- Quantity Sold & Amount Received -->
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="sales-qty" class="block text-xs font-medium text-slate-300 mb-1">Quantity Sold</label>
-                <input type="number" step="any" min="0.001" id="sales-qty" placeholder="0" required inputmode="decimal"
-                  class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500">
-              </div>
-
-              <div>
-                <label for="sales-amount" class="block text-xs font-medium text-slate-300 mb-1">Amount Received</label>
-                <input type="number" step="any" min="0" id="sales-amount" placeholder="0.00" required inputmode="decimal"
-                  class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm font-mono text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500">
-              </div>
-            </div>
-
-            <!-- Mode of Payment (Plain text input, manually typed e.g. "Cash", "UPI", "Bank") -->
-            <div>
-              <label for="sales-mode" class="block text-xs font-medium text-slate-300 mb-1">Mode of Payment</label>
-              <input type="text" id="sales-mode" placeholder="e.g. Cash, UPI, Bank" required autocomplete="off"
-                class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500">
-            </div>
-
-            <!-- Submit Sale Button -->
-            <div class="pt-2">
-              <button type="submit" id="btn-submit-sales"
-                class="w-full py-3.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-semibold text-sm shadow-lg shadow-rose-950/40 flex items-center justify-center space-x-2 transition active:scale-[0.99]">
-                <i class="ph-bold ph-check"></i>
-                <span>Submit Sale</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div id="screen-stock" class="hidden space-y-4">
-        <div class="flex items-center justify-between pb-1">
-          <button class="btn-back-home flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white transition py-1">
-            <i class="ph-bold ph-arrow-left text-sm"></i>
-            <span>Dashboard</span>
-          </button>
-          <button id="btn-refresh-stock" class="flex items-center space-x-1 text-xs text-sky-400 hover:text-sky-300 py-1">
-            <i class="ph-bold ph-arrow-clockwise"></i>
-            <span>Refresh Backend</span>
-          </button>
-        </div>
-
-        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b border-surface-border pb-2.5">
-            <div>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Stock Inventory Matrix</h2>
-              <p class="text-[11px] text-slate-400">Closing = Opening + Purchased - Sold</p>
-            </div>
-          </div>
-
-          <!-- Quick Text Filter Bar -->
-          <div class="relative">
-            <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-sm"></i>
-            <input type="text" id="stock-search-input" placeholder="Search item description..."
-              class="w-full bg-surface-input border border-surface-border rounded-xl pl-9 pr-3 py-2 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-sky-500">
-          </div>
-
-          <!-- Stock Table Matrix -->
-          <div class="overflow-x-auto custom-scroll border border-surface-border rounded-xl">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="bg-surface-cardAlt text-slate-400 text-[10px] uppercase font-semibold border-b border-surface-border">
-                  <th class="py-2.5 px-3">Item Description</th>
-                  <th class="py-2.5 px-2 text-right">Opening</th>
-                  <th class="py-2.5 px-2 text-right">Purchased</th>
-                  <th class="py-2.5 px-2 text-right">Sold</th>
-                  <th class="py-2.5 px-3 text-right">Closing</th>
-                </tr>
-              </thead>
-              <tbody id="stock-table-body" class="divide-y divide-surface-border font-mono">
-                <tr>
-                  <td colspan="5" class="py-6 text-center text-slate-500 font-sans">No stock records found</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div id="screen-report" class="hidden space-y-4">
-        <div class="flex items-center justify-between pb-1">
-          <button class="btn-back-home flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white transition py-1">
-            <i class="ph-bold ph-arrow-left text-sm"></i>
-            <span>Dashboard</span>
-          </button>
-          <span class="text-xs font-mono text-purple-400">PDF Generator</span>
-        </div>
-
-        <div class="bg-surface-card border border-surface-border rounded-2xl p-4 shadow-sm space-y-3.5">
-          <div class="flex items-center space-x-2 border-b border-surface-border pb-2.5">
-            <div class="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm font-bold">
-              <i class="ph-bold ph-file-pdf"></i>
-            </div>
-            <div>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Export & Share Reports</h2>
-              <p class="text-[11px] text-slate-400">Direct tabular PDF compiled in browser</p>
-            </div>
-          </div>
-
-          <!-- Date Filter Picker -->
-          <div>
-            <label for="report-filter-date" class="block text-xs font-medium text-slate-300 mb-1">Filter by Date</label>
-            <input type="date" id="report-filter-date"
-              class="w-full bg-surface-input border border-surface-border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-purple-500">
-          </div>
-
-          <!-- Report Type Selector -->
-          <div>
-            <label for="report-type-select" class="block text-xs font-medium text-slate-300 mb-1">Report Type</label>
-            <select id="report-type-select"
-              class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-purple-500">
-              <option value="purchase">Purchase Report PDF (Tab 1)</option>
-              <option value="sales">Sales Report PDF (Tab 2)</option>
-              <option value="stock">Stock Report PDF (Tab 3 Matrix)</option>
-            </select>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="pt-2 grid grid-cols-2 gap-3">
-            <button id="btn-download-pdf" class="w-full py-3 px-3 rounded-xl bg-surface-cardAlt border border-purple-500/40 hover:bg-purple-950/20 text-purple-300 font-semibold text-xs flex items-center justify-center space-x-1.5 transition active:scale-[0.99]">
-              <i class="ph-bold ph-download-simple text-sm"></i>
-              <span>Download PDF</span>
-            </button>
-
-            <button id="btn-share-pdf" class="w-full py-3 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center space-x-1.5 transition active:scale-[0.99] shadow-lg shadow-purple-950/40">
-              <i class="ph-bold ph-share-network text-sm"></i>
-              <span>Share Report</span>
-            </button>
-          </div>
-
-          <!-- Report Preview Box -->
-          <div class="mt-2 pt-2 border-t border-surface-border text-xs">
-            <span class="text-[11px] font-semibold uppercase text-slate-400">Report Preview Summary</span>
-            <div id="report-preview-stats" class="mt-1.5 p-3 rounded-xl bg-surface-base border border-surface-border text-[11px] font-mono text-slate-300 space-y-1">
-              Select date and click Download or Share.
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </main>
-
-    <div id="modal-settings" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-      <div class="bg-surface-card border border-surface-border rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
-        <div class="flex items-center justify-between border-b border-surface-border pb-3">
-          <div class="flex items-center space-x-2">
-            <i class="ph-bold ph-cloud text-sky-400 text-lg"></i>
-            <h3 class="text-sm font-bold text-white">Backend Web App Configuration</h3>
-          </div>
-          <button id="btn-close-settings" class="text-slate-400 hover:text-white p-1">
-            <i class="ph-bold ph-x text-base"></i>
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label for="input-webhook-url" class="block text-slate-300 font-medium mb-1">Google Apps Script Web App URL</label>
-            <input type="url" id="input-webhook-url" placeholder="https://script.google.com/macros/s/.../exec"
-              class="w-full bg-surface-input border border-surface-border rounded-xl px-3 py-2 text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500">
-            <p class="text-[11px] text-slate-400 mt-1">Accepts batch POST requests and responds to GET with spreadsheet tabs data.</p>
-          </div>
-
-          <div class="pt-2 flex flex-col space-y-2">
-            <button id="btn-export-backup-json" class="w-full py-2.5 px-3 rounded-xl bg-surface-cardAlt border border-surface-border hover:border-slate-500 text-slate-200 font-medium flex items-center justify-center space-x-2 transition">
-              <i class="ph-bold ph-file-arrow-down text-sm"></i>
-              <span>Download Local Queue as JSON Backup</span>
-            </button>
-
-            <button id="btn-reset-storage" class="w-full py-2.5 px-3 rounded-xl bg-rose-950/20 border border-rose-800/40 hover:bg-rose-950/40 text-rose-400 font-medium flex items-center justify-center space-x-2 transition">
-              <i class="ph-bold ph-trash text-sm"></i>
-              <span>Reset Local Queue & History</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="pt-2">
-          <button id="btn-save-settings" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs transition">
-            Save Configuration
-          </button>
-        </div>
+      <h3 style="font-size: 1rem; color: #334155;">Queued Offline Entries</h3>
+      <div class="queue-panel" id="queue-list">
+        <!-- JS populates queue here -->
       </div>
     </div>
 
-    <div id="app-toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 max-w-xs w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl text-xs text-center text-slate-100 pointer-events-none opacity-0 transition-opacity duration-300 z-50 flex items-center justify-center space-x-2">
-      <i id="toast-icon" class="ph-bold ph-check text-emerald-400 text-sm"></i>
-      <span id="toast-text">Success</span>
+    <!-- ==================== PURCHASE SCREEN ==================== -->
+    <div id="screen-purchase" class="screen">
+      <h2 class="section-title">Purchase Entry</h2>
+      <span class="subtitle">Tab 1: Purchase Log (100% Manual Entry)</span>
+      
+      <form onsubmit="handlePurchase(event)">
+        <div class="form-group"><label>Date</label><input type="date" id="p-date" required></div>
+        <div class="form-group"><label>Item Description</label><input type="text" id="p-item" required autocomplete="off"></div>
+        <div class="form-group"><label>Quantity</label><input type="text" inputmode="decimal" id="p-qty" required autocomplete="off"></div>
+        <div class="form-group"><label>Amount</label><input type="text" inputmode="decimal" id="p-amount" required autocomplete="off"></div>
+        <div class="form-group"><label>Transportation Fare</label><input type="text" inputmode="decimal" id="p-fare" required autocomplete="off"></div>
+        <button type="submit" class="btn btn-purchase" style="margin-top: 10px;">[ Submit Purchase ]</button>
+      </form>
+    </div>
+
+    <!-- ==================== SALES SCREEN ==================== -->
+    <div id="screen-sale" class="screen">
+      <h2 class="section-title">Sales Entry</h2>
+      <span class="subtitle">Tab 2: Sales Log</span>
+      
+      <form onsubmit="handleSale(event)">
+        <div class="form-group"><label>Date</label><input type="date" id="s-date" required></div>
+        <div class="form-group">
+          <label>Item Description (Extracted from Stock)</label>
+          <select id="s-item" required>
+            <option value="">-- Select Item --</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Quantity Sold</label><input type="text" inputmode="decimal" id="s-qty" required autocomplete="off"></div>
+        <div class="form-group"><label>Amount Received</label><input type="text" inputmode="decimal" id="s-amount" required autocomplete="off"></div>
+        <div class="form-group"><label>Mode of Payment</label><input type="text" id="s-mode" placeholder="e.g. Cash, UPI, Bank" required autocomplete="off"></div>
+        <button type="submit" class="btn btn-sale" style="margin-top: 10px;">[ Submit Sale ]</button>
+      </form>
+    </div>
+
+    <!-- ==================== STOCK MATRIX SCREEN ==================== -->
+    <div id="screen-stock" class="screen">
+      <h2 class="section-title">Stock Inventory Matrix</h2>
+      <span class="subtitle">Closing = Opening + Purchased - Sold</span>
+      
+      <div class="table-container">
+        <table id="stock-table">
+          <thead>
+            <tr><th>Item Description</th><th>Opening</th><th>Purchased</th><th>Sold</th><th>Closing</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" style="text-align: center;">No data loaded</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== REPORTS SCREEN ==================== -->
+    <div id="screen-report" class="screen">
+      <h2 class="section-title">Export & Share Reports</h2>
+      <span class="subtitle">Direct tabular PDF compiled in browser</span>
+      
+      <div class="form-group" style="background: var(--surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+        <label>Filter by Date (Leave blank for All)</label>
+        <input type="date" id="r-date" style="margin-bottom: 12px;">
+        
+        <label>Report Type</label>
+        <select id="r-type" style="margin-bottom: 20px;">
+          <option value="purchase">Purchase Report PDF (Tab 1)</option>
+          <option value="sale">Sales Report PDF (Tab 2)</option>
+          <option value="stock">Stock Report PDF (Tab 3)</option>
+        </select>
+
+        <button class="btn btn-outline" style="border-color: #334155; color: #334155;" onclick="generatePDF('download')">Download PDF</button>
+        <button class="btn btn-sync" onclick="generatePDF('share')">Share Report via App...</button>
+      </div>
+      
+      <div id="report-preview" style="margin-top: 20px; font-size: 0.85rem; color: #64748b;">
+        <!-- Preview summary text can be populated here -->
+      </div>
+    </div>
+
+    <!-- ==================== CONFIGURATION SCREEN ==================== -->
+    <div id="screen-config" class="screen">
+      <h2 class="section-title">Backend Configuration</h2>
+      <span class="subtitle">Google Apps Script Connection</span>
+      
+      <div class="form-group">
+        <label>Web App URL</label>
+        <input type="text" id="c-url" value="https://script.google.com/macros/s/AKfycbwxQvaax_xzrik6VFlAv7nK-skizRYTUfRzndXA5L7iM9H20TJL3rvIqFREGTdeJOxd5g/exec">
+      </div>
+      <button class="btn btn-outline" style="border-color: #22c55e; color: #22c55e;" onclick="saveConfig()">Save Configuration</button>
+      
+      <div style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <label>Data Management Tools</label>
+        <button class="btn btn-outline" onclick="downloadBackup()">Download Local Queue as JSON Backup</button>
+        <button class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="resetQueue()">Reset Local Queue & History</button>
+      </div>
     </div>
 
   </div>
 
   <script>
-    // Storage Keys
-    const KEY_PURCHASE_QUEUE = 'hw_app_purchase_queue';
-    const KEY_SALES_QUEUE = 'hw_app_sales_queue';
-    const KEY_HISTORICAL_PURCHASES = 'hw_app_hist_purchases';
-    const KEY_HISTORICAL_SALES = 'hw_app_hist_sales';
-    const KEY_OPENING_STOCK = 'hw_app_opening_stock';
-    const KEY_PURCHASE_SL_COUNTER = 'hw_app_p_sl_counter';
-    const KEY_SALES_SL_COUNTER = 'hw_app_s_sl_counter';
-    const KEY_WEBHOOK_URL = 'hw_app_webhook_url';
-    const KEY_LAST_SYNC_TIME = 'hw_app_last_sync_time';
+    // --- Data Storage Keys ---
+    const DB_P = 'yd_purchases';
+    const DB_S = 'yd_sales';
+    const DB_MATRIX = 'yd_matrix';
+    const DB_URL = 'yd_url';
+    const DB_SYNC = 'yd_lastsync';
+    const DB_SL_P = 'yd_next_p_sl';
+    const DB_SL_S = 'yd_next_s_sl';
 
-    // Application In-Memory State
-    let purchaseQueue = [];
-    let salesQueue = [];
-    let historicalPurchases = [];
-    let historicalSales = [];
-    let openingStockMap = {}; // { "Item Name": qty }
-    let purchaseSlCounter = 1;
-    let salesSlCounter = 1;
-    let webhookUrl = '';
-    let lastSyncTimestamp = null;
+    // --- State Initialization ---
+    let purchases = JSON.parse(localStorage.getItem(DB_P) || '[]');
+    let sales = JSON.parse(localStorage.getItem(DB_S) || '[]');
+    let stockMatrix = JSON.parse(localStorage.getItem(DB_MATRIX) || '[]');
+    let nextSlP = parseInt(localStorage.getItem(DB_SL_P) || '1', 10);
+    let nextSlS = parseInt(localStorage.getItem(DB_SL_S) || '1', 10);
 
-    // Helper: Formatted Today Date string YYYY-MM-DD
-    function getTodayString() {
-      const now = new Date();
-      const yr = now.getFullYear();
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const da = String(now.getDate()).padStart(2, '0');
-      return `${yr}-${mo}-${da}`;
-    }
+    document.getElementById('p-date').valueAsDate = new Date();
+    document.getElementById('s-date').valueAsDate = new Date();
+    
+    const savedUrl = localStorage.getItem(DB_URL);
+    if(savedUrl) document.getElementById('c-url').value = savedUrl;
+    
+    document.getElementById('last-sync').innerText = localStorage.getItem(DB_SYNC) || 'Never';
 
-    function loadAppState() {
-      try {
-        purchaseQueue = JSON.parse(localStorage.getItem(KEY_PURCHASE_QUEUE)) || [];
-        salesQueue = JSON.parse(localStorage.getItem(KEY_SALES_QUEUE)) || [];
-        historicalPurchases = JSON.parse(localStorage.getItem(KEY_HISTORICAL_PURCHASES)) || [];
-        historicalSales = JSON.parse(localStorage.getItem(KEY_HISTORICAL_SALES)) || [];
-        openingStockMap = JSON.parse(localStorage.getItem(KEY_OPENING_STOCK)) || {};
-        purchaseSlCounter = parseInt(localStorage.getItem(KEY_PURCHASE_SL_COUNTER), 10) || 1;
-        salesSlCounter = parseInt(localStorage.getItem(KEY_SALES_SL_COUNTER), 10) || 1;
-        webhookUrl = localStorage.getItem(KEY_WEBHOOK_URL) || '';
-        lastSyncTimestamp = localStorage.getItem(KEY_LAST_SYNC_TIME) || null;
-      } catch (err) {
-        console.error('State parse error:', err);
-      }
-    }
-
-    function saveAppState() {
-      try {
-        localStorage.setItem(KEY_PURCHASE_QUEUE, JSON.stringify(purchaseQueue));
-        localStorage.setItem(KEY_SALES_QUEUE, JSON.stringify(salesQueue));
-        localStorage.setItem(KEY_HISTORICAL_PURCHASES, JSON.stringify(historicalPurchases));
-        localStorage.setItem(KEY_HISTORICAL_SALES, JSON.stringify(historicalSales));
-        localStorage.setItem(KEY_OPENING_STOCK, JSON.stringify(openingStockMap));
-        localStorage.setItem(KEY_PURCHASE_SL_COUNTER, purchaseSlCounter.toString());
-        localStorage.setItem(KEY_SALES_SL_COUNTER, salesSlCounter.toString());
-        localStorage.setItem(KEY_WEBHOOK_URL, webhookUrl);
-        if (lastSyncTimestamp) {
-          localStorage.setItem(KEY_LAST_SYNC_TIME, lastSyncTimestamp);
-        }
-      } catch (err) {
-        console.error('State save error:', err);
-      }
-    }
-
-    let toastTimer = null;
-    function triggerToast(text, isError = false) {
-      const toastEl = document.getElementById('app-toast');
-      const toastText = document.getElementById('toast-text');
-      const toastIcon = document.getElementById('toast-icon');
-
-      if (toastTimer) clearTimeout(toastTimer);
-
-      toastText.textContent = text;
-      if (isError) {
-        toastIcon.className = 'ph-bold ph-warning-circle text-rose-400 text-sm';
-        toastEl.className = toastEl.className.replace('border-slate-700', 'border-rose-600/70');
+    // --- Navigation Logic ---
+    function nav(targetScreen) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + targetScreen).classList.add('active');
+      
+      if(targetScreen === 'dashboard') {
+        document.getElementById('backBtn').style.display = 'none';
+        updateUI(); // Refresh dashboard stats
       } else {
-        toastIcon.className = 'ph-bold ph-check-circle text-emerald-400 text-sm';
-        toastEl.className = toastEl.className.replace('border-rose-600/70', 'border-slate-700');
+        document.getElementById('backBtn').style.display = 'block';
+        if(targetScreen === 'purchase') document.getElementById('p-date').focus();
+        if(targetScreen === 'sale') document.getElementById('s-date').focus();
       }
-
-      toastEl.style.opacity = '1';
-      toastTimer = setTimeout(() => {
-        toastEl.style.opacity = '0';
-      }, 2500);
+      window.scrollTo(0,0);
     }
 
-    function calculateStockInventoryMatrix() {
-      const matrix = {};
+    // --- Core Logic ---
+    function updateUI() {
+      // Counters
+      document.getElementById('count-in').innerText = purchases.length;
+      document.getElementById('count-out').innerText = sales.length;
+      document.getElementById('sync-total').innerText = purchases.length + sales.length;
 
-      // 1. Seed with known Opening Stock (from Tab 3)
-      Object.keys(openingStockMap).forEach(name => {
-        const key = name.trim().toLowerCase();
-        matrix[key] = {
-          name: name.trim(),
-          opening: parseFloat(openingStockMap[name]) || 0,
-          purchased: 0,
-          sold: 0
-        };
-      });
-
-      // 2. Aggregate all Purchases (historical + local queue)
-      const allPurchases = [...historicalPurchases, ...purchaseQueue];
-      allPurchases.forEach(p => {
-        if (!p.itemDescription) return;
-        const key = p.itemDescription.trim().toLowerCase();
-        if (!matrix[key]) {
-          matrix[key] = {
-            name: p.itemDescription.trim(),
-            opening: 0,
-            purchased: 0,
-            sold: 0
-          };
-        }
-        matrix[key].purchased += parseFloat(p.quantity) || 0;
-      });
-
-      // 3. Aggregate all Sales (historical + local queue)
-      const allSales = [...historicalSales, ...salesQueue];
-      allSales.forEach(s => {
-        if (!s.itemDescription) return;
-        const key = s.itemDescription.trim().toLowerCase();
-        if (!matrix[key]) {
-          matrix[key] = {
-            name: s.itemDescription.trim(),
-            opening: 0,
-            purchased: 0,
-            sold: 0
-          };
-        }
-        matrix[key].sold += parseFloat(s.quantitySold) || 0;
-      });
-
-      // 4. Compute Dynamic Current Closing Stock: (Opening Stock + Total Purchased - Total Sold)
-      return Object.values(matrix).map(item => ({
-        ...item,
-        closing: item.opening + item.purchased - item.sold
-      })).sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    function updateDashboard() {
-      const unPurchases = purchaseQueue.length;
-      const unSales = salesQueue.length;
-      const totalUnsynced = unPurchases + unSales;
-
-      document.getElementById('unsynced-badge').textContent = `${totalUnsynced} unsynced`;
-      document.getElementById('summary-unsynced-purchases').textContent = unPurchases;
-      document.getElementById('summary-unsynced-sales').textContent = unSales;
-      document.getElementById('queue-total-count').textContent = `${totalUnsynced} items`;
-
-      if (lastSyncTimestamp) {
-        const d = new Date(lastSyncTimestamp);
-        document.getElementById('summary-last-sync').textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+      // Queue List
+      const qList = document.getElementById('queue-list');
+      qList.innerHTML = '';
+      if(purchases.length === 0 && sales.length === 0) {
+        qList.innerHTML = '<div style="color:#94a3b8; font-size:0.85rem; text-align: center;">Local queue is empty.</div>';
       } else {
-        document.getElementById('summary-last-sync').textContent = 'Never';
-      }
-
-      // Render Queue Preview List
-      const queueListEl = document.getElementById('dashboard-queue-list');
-      const allQueued = [
-        ...purchaseQueue.map(p => ({ ...p, _type: 'Purchase', _item: p.itemDescription, _qty: p.quantity })),
-        ...salesQueue.map(s => ({ ...s, _type: 'Sale', _item: s.itemDescription, _qty: s.quantitySold }))
-      ];
-
-      if (allQueued.length === 0) {
-        queueListEl.innerHTML = `<div class="py-6 text-center text-slate-500">Local queue is empty. Everything is synced.</div>`;
-      } else {
-        queueListEl.innerHTML = allQueued.map(entry => `
-          <div class="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-base border border-surface-border">
-            <div class="flex items-center space-x-2 truncate">
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${entry._type === 'Purchase' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">
-                ${entry._type[0]} #${entry.slNo}
-              </span>
-              <span class="text-slate-200 truncate">${escapeHTML(entry._item)}</span>
-            </div>
-            <div class="font-mono text-slate-400 font-semibold pl-2 whitespace-nowrap">
-              ${entry._qty}
-            </div>
-          </div>
-        `).join('');
-      }
-
-      // Sl badges update
-      document.getElementById('purchase-sl-badge').textContent = `Sl. No. #${purchaseSlCounter}`;
-      document.getElementById('sales-sl-badge').textContent = `Sl. No. #${salesSlCounter}`;
-    }
-
-    function escapeHTML(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    const screens = {
-      dashboard: document.getElementById('screen-dashboard'),
-      purchase: document.getElementById('screen-purchase'),
-      sales: document.getElementById('screen-sales'),
-      stock: document.getElementById('screen-stock'),
-      report: document.getElementById('screen-report')
-    };
-
-    function switchScreen(screenKey) {
-      Object.keys(screens).forEach(key => screens[key].classList.add('hidden'));
-      screens[screenKey].classList.remove('hidden');
-
-      if (screenKey === 'purchase') {
-        document.getElementById('purchase-date').value = getTodayString();
-        setTimeout(() => document.getElementById('purchase-item').focus(), 80);
-      } else if (screenKey === 'sales') {
-        document.getElementById('sales-date').value = getTodayString();
-        setTimeout(() => document.getElementById('sales-item').focus(), 80);
-      } else if (screenKey === 'stock') {
-        renderStockMatrixView();
-      } else if (screenKey === 'report') {
-        document.getElementById('report-filter-date').value = getTodayString();
-        updateReportPreviewSummary();
-      } else {
-        updateDashboard();
-      }
-    }
-
-    // Wire up navigation buttons
-    document.getElementById('nav-btn-purchase').addEventListener('click', () => switchScreen('purchase'));
-    document.getElementById('nav-btn-sales').addEventListener('click', () => switchScreen('sales'));
-    document.getElementById('nav-btn-stock').addEventListener('click', () => switchScreen('stock'));
-    document.getElementById('nav-btn-report').addEventListener('click', () => switchScreen('report'));
-
-    document.querySelectorAll('.btn-back-home').forEach(btn => {
-      btn.addEventListener('click', () => switchScreen('dashboard'));
-    });
-
-    const formPurchase = document.getElementById('form-purchase');
-    formPurchase.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      const dateVal = document.getElementById('purchase-date').value.trim() || getTodayString();
-      const itemVal = document.getElementById('purchase-item').value.trim();
-      const qtyVal = parseFloat(document.getElementById('purchase-qty').value);
-      const amountVal = parseFloat(document.getElementById('purchase-amount').value);
-      const fareVal = parseFloat(document.getElementById('purchase-fare').value);
-
-      if (!itemVal) {
-        triggerToast('Item description is required', true);
-        return;
-      }
-      if (isNaN(qtyVal) || qtyVal <= 0) {
-        triggerToast('Enter valid quantity', true);
-        return;
-      }
-      if (isNaN(amountVal) || amountVal < 0) {
-        triggerToast('Enter valid amount', true);
-        return;
-      }
-
-      // Add to Purchase Queue with Sequential Serial Number
-      const entry = {
-        slNo: purchaseSlCounter,
-        date: dateVal,
-        itemDescription: itemVal,
-        quantity: qtyVal,
-        amount: isNaN(amountVal) ? 0 : amountVal,
-        transportFare: isNaN(fareVal) ? 0 : fareVal,
-        timestamp: new Date().toISOString()
-      };
-
-      purchaseQueue.push(entry);
-      purchaseSlCounter += 1;
-      saveAppState();
-
-      // Clear all fields and auto-focus the first field for rapid back-to-back entries
-      document.getElementById('purchase-item').value = '';
-      document.getElementById('purchase-qty').value = '';
-      document.getElementById('purchase-amount').value = '';
-      document.getElementById('purchase-fare').value = '';
-      document.getElementById('purchase-date').value = getTodayString();
-
-      document.getElementById('purchase-sl-badge').textContent = `Sl. No. #${purchaseSlCounter}`;
-      document.getElementById('purchase-item').focus();
-
-      triggerToast(`Purchase #${entry.slNo} saved locally`);
-      updateDashboard();
-    });
-
-    const formSales = document.getElementById('form-sales');
-    formSales.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      const dateVal = document.getElementById('sales-date').value.trim() || getTodayString();
-      const itemVal = document.getElementById('sales-item').value.trim();
-      const qtyVal = parseFloat(document.getElementById('sales-qty').value);
-      const amountVal = parseFloat(document.getElementById('sales-amount').value);
-      const modeVal = document.getElementById('sales-mode').value.trim();
-
-      if (!itemVal) {
-        triggerToast('Item description is required', true);
-        return;
-      }
-      if (isNaN(qtyVal) || qtyVal <= 0) {
-        triggerToast('Enter valid quantity', true);
-        return;
-      }
-      if (isNaN(amountVal) || amountVal < 0) {
-        triggerToast('Enter valid amount', true);
-        return;
-      }
-      if (!modeVal) {
-        triggerToast('Payment mode is required', true);
-        return;
-      }
-
-      // Add to Sales Queue with Sequential Serial Number
-      const entry = {
-        slNo: salesSlCounter,
-        date: dateVal,
-        itemDescription: itemVal,
-        quantitySold: qtyVal,
-        amountReceived: isNaN(amountVal) ? 0 : amountVal,
-        modeOfPayment: modeVal,
-        timestamp: new Date().toISOString()
-      };
-
-      salesQueue.push(entry);
-      salesSlCounter += 1;
-      saveAppState();
-
-      // Clear all fields and auto-focus for next entry
-      document.getElementById('sales-item').value = '';
-      document.getElementById('sales-qty').value = '';
-      document.getElementById('sales-amount').value = '';
-      document.getElementById('sales-mode').value = '';
-      document.getElementById('sales-date').value = getTodayString();
-
-      document.getElementById('sales-sl-badge').textContent = `Sl. No. #${salesSlCounter}`;
-      document.getElementById('sales-item').focus();
-
-      triggerToast(`Sale #${entry.slNo} saved locally`);
-      updateDashboard();
-    });
-
-    function renderStockMatrixView() {
-      const matrix = calculateStockInventoryMatrix();
-      const filter = (document.getElementById('stock-search-input').value || '').trim().toLowerCase();
-      const tbody = document.getElementById('stock-table-body');
-
-      const filtered = matrix.filter(item => item.name.toLowerCase().includes(filter));
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-sans">No matching items found</td></tr>`;
-        return;
-      }
-
-      // Strictly numerical layout with NO low-stock warnings or color-coded alert badges
-      tbody.innerHTML = filtered.map(item => `
-        <tr class="hover:bg-surface-cardAlt/50 transition">
-          <td class="py-2.5 px-3 font-sans font-medium text-slate-200">${escapeHTML(item.name)}</td>
-          <td class="py-2.5 px-2 text-right text-slate-400">${item.opening}</td>
-          <td class="py-2.5 px-2 text-right text-slate-300">${item.purchased}</td>
-          <td class="py-2.5 px-2 text-right text-slate-300">${item.sold}</td>
-          <td class="py-2.5 px-3 text-right font-bold text-slate-100">${item.closing}</td>
-        </tr>
-      `).join('');
-    }
-
-    document.getElementById('stock-search-input').addEventListener('input', renderStockMatrixView);
-
-    async function executeSyncNow() {
-      const unsyncedCount = purchaseQueue.length + salesQueue.length;
-      if (unsyncedCount === 0) {
-        triggerToast('No unsynced records to sync');
-        return;
-      }
-
-      if (!webhookUrl || !webhookUrl.startsWith('http')) {
-        triggerToast('Please configure Web App URL in settings first', true);
-        document.getElementById('modal-settings').classList.remove('hidden');
-        return;
-      }
-
-      const syncBtn = document.getElementById('btn-sync-now');
-      const spinner = document.getElementById('sync-spinner');
-      const syncStatus = document.getElementById('sync-status-text');
-
-      syncBtn.disabled = true;
-      spinner.classList.add('animate-spin');
-      syncStatus.textContent = 'Syncing...';
-
-      // Build JSON payload
-      const payload = {
-        action: 'batchSync',
-        purchases: [...purchaseQueue],
-        sales: [...salesQueue]
-      };
-
-      try {
-        // Post payload directly to Google Apps Script Web App
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8' // Text plain prevents CORS preflight failure in Google Apps Script
-          },
-          body: JSON.stringify(payload)
+        purchases.forEach((p, i) => {
+          qList.innerHTML += `<div class="queue-item"><span>[IN] ${p.date} | ${p.itemDescription} (Qty: ${p.quantity})</span> <button class="delete-btn" onclick="deleteEntry('p', ${i})">Del</button></div>`;
         });
+        sales.forEach((s, i) => {
+          qList.innerHTML += `<div class="queue-item"><span>[OUT] ${s.date} | ${s.itemDescription} (Qty: ${s.quantitySold})</span> <button class="delete-btn" onclick="deleteEntry('s', ${i})">Del</button></div>`;
+        });
+      }
 
-        // Archive synced items into local historical cache
-        historicalPurchases = [...historicalPurchases, ...purchaseQueue];
-        historicalSales = [...historicalSales, ...salesQueue];
-        purchaseQueue = [];
-        salesQueue = [];
-        lastSyncTimestamp = new Date().toISOString();
-        saveAppState();
+      // Rule 2: Populate Sales Dropdown by binding directly to the 'stock' array
+      const sItem = document.getElementById('s-item');
+      sItem.innerHTML = '<option value="">-- Select Item --</option>';
+      const uniqueItems = new Set();
+      
+      stockMatrix.forEach(m => uniqueItems.add(m.itemDescription));
+      purchases.forEach(p => uniqueItems.add(p.itemDescription)); // Support newly purchased un-synced items
+      
+      Array.from(uniqueItems).sort().forEach(item => {
+        if(item) {
+          sItem.innerHTML += `<option value="${item}">${item}</option>`;
+        }
+      });
 
-        // Refresh latest data from backend if server supports GET
-        fetchBackendStockData(false);
+      // Rule 2: Calculate & Render Stock Matrix mapping directly from specific payload fields
+      const tbody = document.querySelector('#stock-table tbody');
+      tbody.innerHTML = '';
+      
+      const dynamicStock = {};
+      
+      // Bind exact field names from the GET payload
+      stockMatrix.forEach(m => {
+        dynamicStock[m.itemDescription] = { 
+          open: Number(m.openingStock) || 0, 
+          in: Number(m.totalPurchased) || 0, 
+          out: Number(m.totalSold) || 0,
+          closing: Number(m.currentClosingStock) || 0 
+        };
+      });
+      
+      // Overlay offline un-synced entries temporarily on the matrix view
+      purchases.forEach(p => {
+        if(!dynamicStock[p.itemDescription]) dynamicStock[p.itemDescription] = {open:0, in:0, out:0, closing:0};
+        dynamicStock[p.itemDescription].in += Number(p.quantity);
+        dynamicStock[p.itemDescription].closing += Number(p.quantity);
+      });
+      sales.forEach(s => {
+        if(!dynamicStock[s.itemDescription]) dynamicStock[s.itemDescription] = {open:0, in:0, out:0, closing:0};
+        dynamicStock[s.itemDescription].out += Number(s.quantitySold);
+        dynamicStock[s.itemDescription].closing -= Number(s.quantitySold);
+      });
 
-        triggerToast(`Successfully synced ${unsyncedCount} records`);
-        syncStatus.textContent = 'Synced';
-      } catch (err) {
-        console.warn('Sync encounter:', err);
-        triggerToast('Sync failed. Please check Web App URL or internet.', true);
-        syncStatus.textContent = 'Sync Failed';
-      } finally {
-        syncBtn.disabled = false;
-        spinner.classList.remove('animate-spin');
-        updateDashboard();
+      const items = Object.keys(dynamicStock).sort();
+      
+      // Replaces "No data loaded" dynamically
+      if(items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No data loaded</td></tr>';
+      } else {
+        items.forEach(item => {
+          const d = dynamicStock[item];
+          tbody.innerHTML += `<tr><td>${item}</td><td>${d.open}</td><td>${d.in}</td><td>${d.out}</td><td><strong>${d.closing}</strong></td></tr>`;
+        });
       }
     }
 
-    document.getElementById('btn-sync-now').addEventListener('click', executeSyncNow);
+    function handlePurchase(e) {
+      e.preventDefault();
+      purchases.push({
+        slNo: nextSlP++,
+        date: document.getElementById('p-date').value,
+        itemDescription: document.getElementById('p-item').value.trim(),
+        quantity: document.getElementById('p-qty').value,
+        amount: document.getElementById('p-amount').value,
+        transportFare: document.getElementById('p-fare').value,
+        syncedAt: ''
+      });
+      localStorage.setItem(DB_SL_P, nextSlP.toString());
+      saveLocal();
+      
+      // Reset form but keep date
+      document.getElementById('p-item').value = '';
+      document.getElementById('p-qty').value = '';
+      document.getElementById('p-amount').value = '';
+      document.getElementById('p-fare').value = '';
+      document.getElementById('p-date').focus();
+    }
 
-    async function fetchBackendStockData(notify = true) {
-      if (!webhookUrl || !webhookUrl.startsWith('http')) {
-        if (notify) triggerToast('Webhook URL not configured', true);
+    function handleSale(e) {
+      e.preventDefault();
+      sales.push({
+        slNo: nextSlS++,
+        date: document.getElementById('s-date').value,
+        itemDescription: document.getElementById('s-item').value,
+        quantitySold: document.getElementById('s-qty').value,
+        amountReceived: document.getElementById('s-amount').value,
+        modeOfPayment: document.getElementById('s-mode').value.trim(),
+        syncedAt: ''
+      });
+      localStorage.setItem(DB_SL_S, nextSlS.toString());
+      saveLocal();
+      
+      // Reset form
+      document.getElementById('s-item').value = '';
+      document.getElementById('s-qty').value = '';
+      document.getElementById('s-amount').value = '';
+      document.getElementById('s-mode').value = '';
+      document.getElementById('s-date').focus();
+    }
+
+    function deleteEntry(type, index) {
+      if(type === 'p') purchases.splice(index, 1);
+      if(type === 's') sales.splice(index, 1);
+      saveLocal();
+    }
+
+    function saveLocal() {
+      localStorage.setItem(DB_P, JSON.stringify(purchases));
+      localStorage.setItem(DB_S, JSON.stringify(sales));
+      updateUI();
+    }
+
+    function saveConfig() {
+      localStorage.setItem(DB_URL, document.getElementById('c-url').value.trim());
+      alert('Configuration saved.');
+      fetchBackendData();
+    }
+
+    // --- Network & Sync ---
+    function setStatus(online) {
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if(online) {
+        dot.classList.remove('offline');
+        txt.innerText = 'Online / Ready';
+      } else {
+        dot.classList.add('offline');
+        txt.innerText = 'Offline / Queued';
+      }
+    }
+
+    async function fetchBackendData() {
+      const url = document.getElementById('c-url').value.trim();
+      if(!url) return;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if(data.stock) {
+          stockMatrix = data.stock;
+          localStorage.setItem(DB_MATRIX, JSON.stringify(stockMatrix));
+          updateUI();
+        }
+        setStatus(true);
+      } catch(e) {
+        console.error("GET failed:", e);
+        setStatus(false);
+      }
+    }
+
+    async function syncData() {
+      const url = document.getElementById('c-url').value.trim();
+      if(!url) { alert("Please check Backend Configuration URL."); return; }
+
+      const syncBtnText = document.getElementById('sync-total');
+
+      // Rule 1: Allow Force Sync even if local queues are empty
+      if(purchases.length === 0 && sales.length === 0) {
+        syncBtnText.innerText = 'Fetching...';
+        await fetchBackendData();
+        syncBtnText.innerText = '0';
+        alert("Force Sync: Stock Matrix updated from server.");
         return;
       }
 
-      const syncStatus = document.getElementById('sync-status-text');
-      syncStatus.textContent = 'Fetching...';
+      const ts = new Date().toISOString();
+      const pLoad = purchases.map(p => ({...p, syncedAt: ts}));
+      const sLoad = sales.map(s => ({...s, syncedAt: ts}));
+
+      syncBtnText.innerText = 'Sending...';
 
       try {
-        const res = await fetch(`${webhookUrl}?action=getInventoryData`);
-        if (res.ok) {
-          const remoteData = await res.json();
-          if (remoteData.openingStock) {
-            openingStockMap = remoteData.openingStock;
-          }
-          if (Array.isArray(remoteData.purchases)) {
-            historicalPurchases = remoteData.purchases;
-          }
-          if (Array.isArray(remoteData.sales)) {
-            historicalSales = remoteData.sales;
-          }
-          saveAppState();
-          if (notify) triggerToast('Inventory data updated from sheet');
-          syncStatus.textContent = 'Ready';
-        }
-      } catch (err) {
-        console.warn('Backend fetch note:', err);
-        if (notify) triggerToast('Could not fetch from backend. Working with local cache.');
-        syncStatus.textContent = 'Ready';
-      }
-
-      renderStockMatrixView();
-    }
-
-    document.getElementById('btn-refresh-stock').addEventListener('click', () => fetchBackendStockData(true));
-
-    function compileReportData() {
-      const dateFilter = document.getElementById('report-filter-date').value || getTodayString();
-      const reportType = document.getElementById('report-type-select').value;
-
-      const allPurchases = [...historicalPurchases, ...purchaseQueue];
-      const allSales = [...historicalSales, ...salesQueue];
-
-      if (reportType === 'purchase') {
-        const rows = allPurchases.filter(p => p.date === dateFilter);
-        const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-        const totalFare = rows.reduce((sum, r) => sum + (parseFloat(r.transportFare) || 0), 0);
-        return {
-          title: `Purchase Log Report - ${dateFilter}`,
-          filename: `Purchase_Report_${dateFilter}.pdf`,
-          headers: ['Sl.', 'Date', 'Item Description', 'Qty', 'Amount', 'Transport'],
-          data: rows.map(r => [r.slNo, r.date, r.itemDescription, r.quantity, r.amount.toFixed(2), r.transportFare.toFixed(2)]),
-          summary: `Total Records: ${rows.length} | Total Amount: ₹${totalAmount.toFixed(2)} | Total Transport: ₹${totalFare.toFixed(2)}`
-        };
-      } else if (reportType === 'sales') {
-        const rows = allSales.filter(s => s.date === dateFilter);
-        const totalReceived = rows.reduce((sum, r) => sum + (parseFloat(r.amountReceived) || 0), 0);
-        return {
-          title: `Sales Log Report - ${dateFilter}`,
-          filename: `Sales_Report_${dateFilter}.pdf`,
-          headers: ['Sl.', 'Date', 'Item Description', 'Qty Sold', 'Amount Recv', 'Mode'],
-          data: rows.map(r => [r.slNo, r.date, r.itemDescription, r.quantitySold, r.amountReceived.toFixed(2), r.modeOfPayment]),
-          summary: `Total Sales: ${rows.length} | Amount Received: ₹${totalReceived.toFixed(2)}`
-        };
-      } else {
-        // Stock Matrix Report
-        const matrix = calculateStockInventoryMatrix();
-        return {
-          title: `Stock Balance Matrix - As of ${dateFilter}`,
-          filename: `Stock_Report_${dateFilter}.pdf`,
-          headers: ['Item Description', 'Opening', 'Total Purchased', 'Total Sold', 'Closing Stock'],
-          data: matrix.map(m => [m.name, m.opening, m.purchased, m.sold, m.closing]),
-          summary: `Total Inventory Line Items: ${matrix.length}`
-        };
+        await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors', // Standard config for pushing to Apps Script Web Apps from frontend
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ purchases: pLoad, sales: sLoad })
+        });
+        
+        // On success, clear local queues
+        purchases = [];
+        sales = [];
+        const syncTime = new Date().toLocaleString();
+        localStorage.setItem(DB_SYNC, syncTime);
+        document.getElementById('last-sync').innerText = syncTime;
+        saveLocal();
+        
+        // Refresh matrix from latest spreadsheet data
+        await fetchBackendData();
+        alert("Sync Complete!");
+      } catch(e) {
+        alert("Sync failed. You may be offline.");
+        updateUI();
       }
     }
 
-    function updateReportPreviewSummary() {
-      const report = compileReportData();
-      document.getElementById('report-preview-stats').innerHTML = `
-        <div><strong>Title:</strong> ${escapeHTML(report.title)}</div>
-        <div><strong>Items Count:</strong> ${report.data.length} rows</div>
-        <div class="text-slate-400 mt-1">${escapeHTML(report.summary)}</div>
-      `;
+    // --- Utils & PDF ---
+    function downloadBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({purchases, sales, stockMatrix}));
+      const dl = document.createElement('a');
+      dl.setAttribute("href", dataStr);
+      dl.setAttribute("download", "YoDude_Hardware_Backup.json");
+      dl.click();
     }
 
-    document.getElementById('report-filter-date').addEventListener('change', updateReportPreviewSummary);
-    document.getElementById('report-type-select').addEventListener('change', updateReportPreviewSummary);
+    function resetQueue() {
+      if(confirm("WARNING: This will permanently delete all unsynced items on this device. Proceed?")) {
+        purchases = []; 
+        sales = []; 
+        saveLocal();
+      }
+    }
 
-    function generatePDFDocument() {
+    function generatePDF(action) {
+      const type = document.getElementById('r-type').value;
+      const fDate = document.getElementById('r-date').value;
+      
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const report = compileReportData();
+      
+      let head = [];
+      let body = [];
+      let title = "";
 
-      // Header Branding
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text("HARDWARE STORE INVENTORY SYSTEM", 14, 16);
+      if(type === 'purchase') {
+        title = "Purchase Report";
+        head = [['Date', 'Item', 'Qty', 'Amount', 'Fare']];
+        purchases.filter(p => !fDate || p.date === fDate).forEach(p => {
+          body.push([p.date, p.itemDescription, p.quantity, p.amount, p.transportFare]);
+        });
+      } else if (type === 'sale') {
+        title = "Sales Report";
+        head = [['Date', 'Item', 'Qty', 'Amount', 'Mode']];
+        sales.filter(s => !fDate || s.date === fDate).forEach(s => {
+          body.push([s.date, s.itemDescription, s.quantitySold, s.amountReceived, s.modeOfPayment]);
+        });
+      } else {
+        title = "Stock Matrix Report";
+        head = [['Item Description', 'Opening', 'Purchased', 'Sold', 'Closing']];
+        const rows = document.querySelectorAll('#stock-table tbody tr');
+        rows.forEach(r => {
+          const cols = r.querySelectorAll('td');
+          if(cols.length === 5) {
+            body.push([cols[0].innerText, cols[1].innerText, cols[2].innerText, cols[3].innerText, cols[4].innerText]);
+          }
+        });
+      }
 
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100);
-      doc.text(report.title, 14, 23);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 29);
-
-      // Render Tabular Data using autotable
+      if(fDate) title += ` (Date: ${fDate})`;
+      
+      doc.setFontSize(14);
+      doc.text("Hardware Store Ledger by Yo Dude", 14, 14);
+      doc.setFontSize(11);
+      doc.text(title, 14, 22);
+      
       doc.autoTable({
-        startY: 34,
-        head: [report.headers],
-        body: report.data.length > 0 ? report.data : [['No data recorded for this date', '', '', '', '', '']],
-        theme: 'striped',
-        headStyles: {
-          fillColor: [15, 23, 42],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3
-        }
+        startY: 28,
+        head: head,
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59] },
+        styles: { fontSize: 9 }
       });
 
-      // Render summary footer
-      const finalY = doc.lastAutoTable.finalY + 8;
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(40);
-      doc.text(report.summary, 14, finalY);
+      const filename = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
 
-      return { doc, filename: report.filename };
+      if(action === 'download') {
+        doc.save(filename);
+      } else if (action === 'share') {
+        try {
+          const pdfBlob = doc.output('blob');
+          const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+              title: title,
+              text: 'Generated Hardware Inventory Report',
+              files: [file]
+            }).catch(e => console.log("Share canceled", e));
+          } else {
+            alert('Your browser does not support native file sharing. The file will be downloaded instead.');
+            doc.save(filename);
+          }
+        } catch (e) {
+          alert('Error sharing file. Falling back to download.');
+          doc.save(filename);
+        }
+      }
     }
 
-    // Action: Download PDF
-    document.getElementById('btn-download-pdf').addEventListener('click', () => {
-      try {
-        const { doc, filename } = generatePDFDocument();
-        doc.save(filename);
-        triggerToast('PDF downloaded successfully');
-      } catch (err) {
-        console.error('PDF error:', err);
-        triggerToast('Failed to generate PDF', true);
-      }
-    });
+    // --- App Init ---
+    updateUI();
+    if(navigator.onLine) fetchBackendData();
+    window.addEventListener('online', () => fetchBackendData());
+    window.addEventListener('offline', () => setStatus(false));
 
-    // Action: Share Report via Native Share API
-    document.getElementById('btn-share-pdf').addEventListener('click', async () => {
-      try {
-        const { doc, filename } = generatePDFDocument();
-        const pdfBlob = doc.output('blob');
-        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: filename,
-            text: `Hardware Store Inventory Report (${filename})`
-          });
-          triggerToast('Report shared successfully');
-        } else {
-          // Fallback to download if file sharing is not supported by browser
-          doc.save(filename);
-          triggerToast('Direct file share not supported. PDF downloaded.');
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.warn('Share error:', err);
-          triggerToast('Sharing failed or cancelled', true);
-        }
-      }
-    });
-
-    const modalSettings = document.getElementById('modal-settings');
-    const inputWebhookUrl = document.getElementById('input-webhook-url');
-
-    document.getElementById('btn-open-settings').addEventListener('click', () => {
-      inputWebhookUrl.value = webhookUrl;
-      modalSettings.classList.remove('hidden');
-    });
-
-    document.getElementById('btn-close-settings').addEventListener('click', () => {
-      modalSettings.classList.add('hidden');
-    });
-
-    document.getElementById('btn-save-settings').addEventListener('click', () => {
-      webhookUrl = inputWebhookUrl.value.trim();
-      saveAppState();
-      modalSettings.classList.add('hidden');
-      triggerToast('Settings updated');
-    });
-
-    document.getElementById('btn-export-backup-json').addEventListener('click', () => {
-      const backupData = {
-        purchasesQueue: purchaseQueue,
-        salesQueue: salesQueue,
-        exportTimestamp: new Date().toISOString()
-      };
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `hardware_inventory_backup_${getTodayString()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      triggerToast('Backup file downloaded');
-    });
-
-    document.getElementById('btn-reset-storage').addEventListener('click', () => {
-      const confirmed = window.confirm("Reset all local queues and historical cache? This cannot be undone.");
-      if (confirmed) {
-        localStorage.clear();
-        purchaseQueue = [];
-        salesQueue = [];
-        historicalPurchases = [];
-        historicalSales = [];
-        openingStockMap = {};
-        purchaseSlCounter = 1;
-        salesSlCounter = 1;
-        saveAppState();
-        updateDashboard();
-        modalSettings.classList.add('hidden');
-        triggerToast('Local database cleared');
-      }
-    });
-
-    // Online / Offline Indicator Listener
-    window.addEventListener('online', () => {
-      document.getElementById('network-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block';
-      document.getElementById('network-text').textContent = 'Online';
-    });
-
-    window.addEventListener('offline', () => {
-      document.getElementById('network-dot').className = 'w-2 h-2 rounded-full bg-amber-500 inline-block';
-      document.getElementById('network-text').textContent = 'Offline';
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadAppState();
-      updateDashboard();
-
-      // Register offline Service Worker stub
-      if ('serviceWorker' in navigator) {
-        const swScript = `self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));`;
-        const blob = new Blob([swScript], { type: 'application/javascript' });
-        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-      }
-    });
   </script>
 </body>
 </html>
