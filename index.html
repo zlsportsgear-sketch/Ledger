@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Hardware Store Inventory by Yo Dude</title>
   
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  
   <!-- PDF Generation Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -27,7 +32,7 @@
     header { background: var(--header-bg); color: white; padding: 14px 16px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
     .header-left { display: flex; align-items: center; gap: 12px; }
     .back-btn { background: none; border: 1px solid #475569; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; display: none; }
-    h1 { font-size: 1.1rem; font-weight: 600; }
+    h1 { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
     
     .status-pill { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; background: #475569; display: flex; align-items: center; gap: 6px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
@@ -81,6 +86,7 @@
   <header>
     <div class="header-left">
       <button id="backBtn" class="back-btn" onclick="nav('dashboard')">◀ Back</button>
+      <img src="assets/logo.png" alt="Logo" style="height: 24px; width: auto; border-radius: 4px;">
       <h1>Inventory Ledger</h1>
     </div>
     <div class="status-pill">
